@@ -1,3 +1,7 @@
+export CONNOR_BASH_FILE=`echo "$0"`
+
+# Keybindings
+
 bindkey "\e\e[D" backward-word
 bindkey "\e\e[C" forward-word
 bindkey "^[a" beginning-of-line
@@ -5,4 +9,18 @@ bindkey "^[e" end-of-line
 
 export LESSOPEN="| /usr/local/bin/highlight --out-format=ansi %s"
 
+# Meta
+alias connorbash="cat $CONNOR_BASH_FILE"
+
+# Git
+alias gitc="git checkout"
+alias gitcm="git checkout master"
+gitp () {
+  git push -u origin `git rev-parse --abbrev-ref HEAD`
+}
+
+# Node
 export PATH="$PATH:$(yarn global bin)"
+
+# Lighthouse
+alias lhexample="node lighthouse-cli https://www.example.com --view"
