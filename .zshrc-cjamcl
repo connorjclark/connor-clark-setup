@@ -1,0 +1,8 @@
+bindkey "\e\e[D" backward-word
+bindkey "\e\e[C" forward-word
+bindkey "^[a" beginning-of-line
+bindkey "^[e" end-of-line
+
+export LESSOPEN="| /usr/local/bin/highlight --out-format=ansi %s"
+
+export PATH="$PATH:$(yarn global bin)"
