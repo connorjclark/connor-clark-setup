@@ -1,3 +1,5 @@
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 if ! [ -x "$(command -v brew)" ]; then
   /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 fi
@@ -13,12 +15,10 @@ if ! [ -x "$(command -v zsh)" ]; then
   cd ~/terminal
   curl -O https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/Dracula.itermcolors
 
-  echo '. ~/.zshrc-cjamcl' >> ~/.zshrc
+  echo ". $DIR/.zshrc-cjamcl" >> ~/.zshrc
 
   cd ~
 fi
-
-cp .zshrc-cjamcl ~/.zshrc-cjamcl
 
 # https://superuser.com/questions/71588/how-to-syntax-highlight-via-less
 brew install highlight
