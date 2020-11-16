@@ -24,3 +24,10 @@ export PATH="$PATH:$(yarn global bin 2>/dev/null)"
 
 # Lighthouse
 alias lhexample="node lighthouse-cli https://www.example.com --view"
+
+# Helpers
+function runx() {
+  for ((n=0;n<$1;n++))
+    do ${*:2}
+  done
+}
