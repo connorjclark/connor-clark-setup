@@ -43,3 +43,12 @@ prettyjson_f() {
 prettyjson_w() {
   curl "$1" | python -m json.tool
 }
+
+latest_file () {
+  find "${@:-.}" -maxdepth 1 -type f -printf '%T@.%p\0' |
+    sort -znr -t. -k1,2 |
+    while IFS= read -r -d '' -r record ; do
+      printf '%s' "$record" | cut -d. -f3-;
+      break;
+    done;
+}
