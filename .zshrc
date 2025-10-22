@@ -109,6 +109,62 @@ latest_file () {
   print -r -- ${latest_file:A}
 }
 
+help ex "archive extractor. ex <file>"
+function ex() {
+  if [ -f $1 ] ; then
+  case $1 in
+    *.tar.bz2) tar xjf $1 ;;
+    *.tar.gz) tar xzf $1 ;;
+    *.tar.xz) tar xf $1 ;;
+    *.bz2) bunzip2 $1 ;;
+    *.rar) unrar x $1 ;;
+    *.gz) gunzip $1 ;;
+    *.tar) tar xf $1 ;;
+    *.tbz2) tar xjf $1 ;;
+    *.tgz) tar xzf $1 ;;
+    *.zip) unzip $1 ;;
+    *.Z) uncompress $1;;
+    *.7z) 7z x $1 ;;
+    *) echo "'$1' cannot be extracted via ex()" ;;
+  esac
+  else
+    echo "'$1' is not a valid file"
+  fi
+}
+
+help mkcd "mdkir && cd"
+mkcd () {
+  \mkdir -p "$1"
+  cd "$1"
+}
+
+help temp "Create temporary directory and cd into it"
+temp () {
+  cd "$(mktemp -d)"
+  chmod -R 0700 .
+  if [[ $# -eq 1 ]]; then
+    \mkdir -p "$1"
+    cd "$1"
+    chmod -R 0700 .
+  fi
+}
+
+help boop "Play sfx based on exit code of last command"
+boop () {
+  local last="$?"
+  if [[ "$last" == '0' ]]; then
+    sfx good
+  else
+    sfx bad
+  fi
+  $(exit "$last")
+}
+
+help ds-destroy "Delete .DS_Store in pwd"
+ds-destroy() {
+  find . -name .DS_Store -delete
+}
+
 prettyjson_s() {
   echo "$1" | python -m json.tool
 }
@@ -120,3 +176,17 @@ prettyjson_f() {
 prettyjson_w() {
   curl "$1" | python -m json.tool
 }
+
+# Scripts
+#########
+
+SCRIPT_PATH="$(realpath "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+export PATH=$SCRIPT_DIR/bin:$PATH
+
+help copy "copy to clipboard"
+help cpwd "copy pwd to clipboard"
+help pasta "paste to clipboard"
+
+# Doesn't seem to work.
+# help notify
