@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+
+import urllib.request
+import urllib.error
+import urllib.parse
+import concurrent.futures
+import sys
+import re
+import time
+from collections import defaultdict
+
+# We use a standard browser User-Agent so sites don't immediately reject us as a bot
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+}
+
+
+def is_valid_url(url):
+    """Checks if a URL is live using only built-in modules."""
+    req = urllib.request.Request(url, headers=HEADERS)
+
+    try:
+        # We use a 10-second timeout
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return True
+
+    except urllib.error.HTTPError as e:
+        # e.code contains the HTTP status code.
+        # We consider it valid if it's blocking our script but the page exists (401, 403, 405, 429)
+        if e.code in [401, 403, 405, 429]:
+            return True
+        else:
+            print(f"[INVALID - {e.code}] {url}")
+            return False
+
+    except urllib.error.URLError as e:
+        # This catches dead links, DNS failures, and timeouts
+        print(f"[ERROR - Dead Link] {url} ({e.reason})")
+        return False
+
+    except Exception as e:
+        print(f"[ERROR - Unexpected] {url} ({type(e).__name__})")
+        return False
+
+
+def process_domain_group(domain, urls):
+    """Processes a list of URLs for a single domain, spacing requests by 5 seconds."""
+    for i, url in enumerate(urls):
+        is_valid_url(url)
+
+        # Sleep for a few seconds before the next request to this specific domain.
+        if i < len(urls) - 1:
+            time.sleep(3)
+
+
+def process_file(input_file):
+    try:
+        with open(input_file, "r", encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        print(f"Error: Could not find '{input_file}'.")
+        sys.exit(1)
+
+    # Regex to capture URLs, allowing brackets and parentheses
+    url_pattern = re.compile(r'https?://[^\s\'"<>]+')
+
+    raw_urls = url_pattern.findall(text)
+    unique_urls = list(set(url.rstrip(".,;") for url in raw_urls))
+
+    if not unique_urls:
+        print("No URLs found in the file.")
+        return
+
+    # Group URLs by their domain (netloc)
+    domain_groups = defaultdict(list)
+    for url in unique_urls:
+        # urlparse extracts the domain (e.g., 'www.brilliantearth.com' from the full URL)
+        domain = urllib.parse.urlparse(url).netloc
+        domain_groups[domain].append(url)
+
+    print(
+        f"Found {len(unique_urls)} unique URLs across {len(domain_groups)} domains:\n"
+    )
+
+    for urls in domain_groups.values():
+        for url in urls:
+            print(url)
+
+    print("\Looking for invalid URLs. Please wait...\n")
+
+    # We use max_workers based on the number of unique domains (capped at 20 to prevent OS resource starvation)
+    # Each thread will handle one domain and all of its associated URLs
+    thread_count = min(20, len(domain_groups))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
+        # Submit each domain group as its own separate task
+        futures = [
+            executor.submit(process_domain_group, domain, urls)
+            for domain, urls in domain_groups.items()
+        ]
+
+        # Wait for all domain threads to finish their queues
+        concurrent.futures.wait(futures)
+
+    print("\nDone!")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python script.py <path_to_file>")
+        sys.exit(1)
+
+    input_filename = sys.argv[1]
+    process_file(input_filename)

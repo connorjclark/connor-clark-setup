@@ -190,3 +190,16 @@ help pasta "paste to clipboard"
 
 # Doesn't seem to work.
 # help notify
+
+# Productivity
+##############
+
+help notes "open notes"
+notes () {
+  code ~/notes/`date "+%m-%d-%y"`.md
+}
+
+help tasks "open current tasks"
+tasks () {
+  code ~/notes/tasks.md
+}
