@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import urllib.request
-import urllib.error
+import requests
 import urllib.parse
 import concurrent.futures
 import sys
@@ -16,28 +15,31 @@ HEADERS = {
 
 
 def is_valid_url(url):
-    """Checks if a URL is live using only built-in modules."""
-    req = urllib.request.Request(url, headers=HEADERS)
-
+    """Checks if a URL is live using the requests module."""
     try:
-        # We use a 10-second timeout
-        with urllib.request.urlopen(req, timeout=10) as response:
+        # We use allow_redirects=False to catch redirects
+        response = requests.get(url, headers=HEADERS, timeout=10, allow_redirects=False)
+
+        if 200 <= response.status_code < 300:
             return True
 
-    except urllib.error.HTTPError as e:
-        # e.code contains the HTTP status code.
-        # We consider it valid if it's blocking our script but the page exists (401, 403, 405, 429)
-        if e.code in [401, 403, 405, 429]:
+        # Flag redirects
+        if 300 <= response.status_code < 400:
+            location = response.headers.get("Location", "Unknown")
+            print(f"[REDIRECT - {response.status_code}] {url} -> {location}")
+            return True
+
+        # We consider it valid if it's blocking our script but the page exists
+        if response.status_code in [401, 403, 405, 429]:
             return True
         else:
-            print(f"[INVALID - {e.code}] {url}")
+            print(f"[INVALID - {response.status_code}] {url}")
             return False
 
-    except urllib.error.URLError as e:
+    except requests.exceptions.RequestException as e:
         # This catches dead links, DNS failures, and timeouts
-        print(f"[ERROR - Dead Link] {url} ({e.reason})")
+        print(f"[ERROR] {url} ({type(e).__name__})")
         return False
-
     except Exception as e:
         print(f"[ERROR - Unexpected] {url} ({type(e).__name__})")
         return False
@@ -86,7 +88,7 @@ def process_file(input_file):
         for url in urls:
             print(url)
 
-    print("\Looking for invalid URLs. Please wait...\n")
+    print("\nLooking for invalid URLs. Please wait...\n")
 
     # We use max_workers based on the number of unique domains (capped at 20 to prevent OS resource starvation)
     # Each thread will handle one domain and all of its associated URLs
