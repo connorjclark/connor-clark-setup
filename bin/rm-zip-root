@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+import zipfile
+import os
+import shutil
+import sys
+
+
+def flatten_single_root_zip(zip_path, output_path=None):
+    """
+    Checks if a ZIP file has a single root folder. If so, removes the root
+    folder and elevates all contents to the top level in a new ZIP file.
+    """
+    if output_path is None:
+        base, ext = os.path.splitext(zip_path)
+        output_path = f"{base}_flattened{ext}"
+
+    # Open the original zip to inspect its structure
+    with zipfile.ZipFile(zip_path, "r") as zin:
+        namelist = zin.namelist()
+
+        # Identify all top-level items. ZIP paths always use forward slashes.
+        root_items = set()
+        for name in namelist:
+            parts = name.split("/")
+            if parts[0]:  # Ignore empty strings from trailing slashes
+                root_items.add(parts[0])
+
+        # Condition 1: Must have exactly one root item
+        if len(root_items) != 1:
+            print(f"Skipping '{zip_path}': Found {len(root_items)} top-level items.")
+            return False
+
+        root_folder = root_items.pop()
+
+        # Condition 2: The single root item must be a folder (has contents)
+        is_folder = any(
+            name.startswith(f"{root_folder}/") and name != f"{root_folder}/"
+            for name in namelist
+        )
+
+        if not is_folder:
+            print(
+                f"Skipping '{zip_path}': The single root item is a file, not a folder."
+            )
+            return False
+
+        print(f"Single root folder '{root_folder}/' found. Flattening...")
+
+        # Create the new flattened zip
+        with zipfile.ZipFile(
+            output_path, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zout:
+            for item in zin.infolist():
+                original_filename = item.filename
+
+                # Skip the root directory entry itself
+                if original_filename == f"{root_folder}/":
+                    continue
+
+                # Strip the root folder name from the beginning of the path
+                new_filename = original_filename[len(root_folder) + 1 :]
+
+                # Update the ZipInfo object to use the new path (this preserves dates/permissions)
+                item.filename = new_filename
+
+                # Stream the file data from the old zip to the new zip
+                with zin.open(original_filename) as source, zout.open(
+                    item, "w"
+                ) as target:
+                    shutil.copyfileobj(source, target)
+
+        print(f"Success! Flattened ZIP saved as: {output_path}")
+        return True
+
+
+# --- Usage Example ---
+if __name__ == "__main__":
+    target_zip = sys.argv[1]
+
+    if os.path.exists(target_zip):
+        flatten_single_root_zip(target_zip)
+    else:
+        print(f"Error: Could not find '{target_zip}'")
