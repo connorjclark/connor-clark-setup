@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+import sys
+
+from pathlib import Path
+from collections import defaultdict
+
+
+def format_size(size_in_bytes):
+    """Converts a size in bytes to a human-readable format."""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size_in_bytes < 1024.0:
+            return f"{size_in_bytes:.2f} {unit}"
+        size_in_bytes /= 1024.0
+    return f"{size_in_bytes:.2f} PB"
+
+
+def main():
+    # Ensure exactly one argument (the folder path) is provided
+    if len(sys.argv) != 2:
+        print(f"Usage: python {sys.argv[0]} <directory_path>")
+        sys.exit(1)
+
+    directory_path = Path(sys.argv[1])
+
+    # Validate that the provided path is a directory
+    if not directory_path.is_dir():
+        print(f"Error: The path '{directory_path}' is not a valid directory.")
+        sys.exit(1)
+
+    # Dictionary to store total size per extension
+    extension_sizes = defaultdict(int)
+
+    print(f"Scanning directory: {directory_path}...\n")
+
+    # Recursively iterate through all files using rglob
+    for file_path in directory_path.rglob("*"):
+        if file_path.is_file():
+            # Get the extension (in lowercase to group .JPG and .jpg together)
+            # If the file has no extension, group it under 'No Extension'
+            ext = file_path.suffix.lower() if file_path.suffix else "No Extension"
+
+            try:
+                # Add the file's size to the running total for that extension
+                extension_sizes[ext] += file_path.stat().st_size
+            except OSError as e:
+                # Handle edge cases like permission denied or broken symlinks
+                print(
+                    f"Warning: Could not read file {file_path}. Reason: {e}",
+                    file=sys.stderr,
+                )
+
+    # Sort the dictionary alphabetically by extension
+    sorted_extensions = sorted(extension_sizes.items(), key=lambda item: -item[1])
+
+    # Output the results in a formatted table
+    print(f"{'Extension':<15} | {'Total Size':>15}")
+    print("-" * 33)
+    for ext, size in sorted_extensions:
+        print(f"{ext:<15} | {format_size(size):>15}")
+
+
+if __name__ == "__main__":
+    main()

@@ -187,6 +187,7 @@ export PATH=$SCRIPT_DIR/bin:$PATH
 help copy "copy to clipboard"
 help cpwd "copy pwd to clipboard"
 help pasta "paste to clipboard"
+help size-by-time "print total size of all files grouped by ext"
 
 # Doesn't seem to work.
 # help notify
