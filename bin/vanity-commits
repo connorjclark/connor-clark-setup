@@ -1,27 +1,46 @@
 #!/usr/bin/env bash
 
-git log --all --format="%H | %s" | awk '
+REPEAT_COUNT=6
+NUM_COUNT=16
+
+git log --all --format="%H | %s" | awk -v rep_cnt="$REPEAT_COUNT" -v num_cnt="$NUM_COUNT" '
+BEGIN {
+	# Dynamically build the regex for repeating characters (e.g., 000...|111...)
+	chars = "0123456789abcdef"
+	for (i = 1; i <= length(chars); i++) {
+		c = substr(chars, i, 1)
+		str = ""
+		for (j = 1; j <= rep_cnt; j++) str = str c
+		if (i > 1) rep_regex = rep_regex "|"
+		rep_regex = rep_regex str
+	}
+	rep_regex = "(" rep_regex ")"
+
+	# Dynamically build the regex for numbers only (e.g., ^[0-9][0-9][0-9]...)
+	num_regex = "^"
+	for (j = 1; j <= num_cnt; j++) num_regex = num_regex "[0-9]"
+}
 {
 	# 1. Hexspeak words
-	if ($1 ~ /^(c0ffee|dead|beef|badc0de|facade|deface|decaf|f00d)/) { 
+	if ($1 ~ /^(c0ffee|dead|beef|badc0de|facade|deface|decaf|f00d|b00b)/) { 
 		hex = hex $0 "\n" 
 	}
-	# 2. Repeating characters (8 in a row)
-	else if ($1 ~ /(00000000|11111111|22222222|33333333|44444444|55555555|66666666|77777777|88888888|99999999|aaaaaaaa|bbbbbbbb|cccccccc|dddddddd|eeeeeeee|ffffffff)/) { 
+	# 2. Repeating characters (dynamic)
+	else if ($1 ~ rep_regex) { 
 		rep = rep $0 "\n" 
 	}
 	# 3. Sequential
 	else if ($1 ~ /^123456/) { 
 		seq = seq $0 "\n" 
 	}
-	# 4. Short hashes containing only numbers
-	else if ($1 ~ /^[0-9]{7}/) { 
+	# 4. Short hashes containing only numbers (dynamic)
+	else if ($1 ~ num_regex) { 
 		num = num $0 "\n" 
 	}
 }
 END {
 	if (hex) print "=== HEXSPEAK ===\n" hex;
-	if (rep) print "=== REPEATING CHARS ===\n" rep;
+	if (rep) print "=== REPEATING CHARS (" rep_cnt ") ===\n" rep;
 	if (seq) print "=== SEQUENTIAL ===\n" seq;
-	if (num) print "=== NUMBERS ONLY (First 7) ===\n" num;
+	if (num) print "=== NUMBERS ONLY (First " num_cnt ") ===\n" num;
 }'
